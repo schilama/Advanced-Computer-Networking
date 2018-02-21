@@ -1,0 +1,73 @@
+Droptail RENO
+***************
+TCP
+Sampled time:0.000000 Average latency: 0.061392
+Sampled time:0.500000 Average latency: 0.063872
+Sampled time:1.000000 Average latency: 0.063071
+Sampled time:1.500000 Average latency: 0.062886
+Sampled time:2.000000 Average latency: 0.062805
+Sampled time:2.500000 Average latency: 0.066098
+Sampled time:3.000000 Average latency: 0.069758
+Sampled time:3.500000 Average latency: 0.069508
+Sampled time:4.000000 Average latency: 0.071376
+Sampled time:4.500000 Average latency: 0.070093
+Sampled time:5.000000 Average latency: 0.069045
+
+CBR: RTT does not exist for CBR, so did not compute latency (can use end to end delay but did not for this experiment).
+
+
+Droptail SACK
+********************
+TCP
+Sampled time:0.000000 Average latency: 0.061392
+Sampled time:0.500000 Average latency: 0.063872
+Sampled time:1.000000 Average latency: 0.063071
+Sampled time:1.500000 Average latency: 0.062886
+Sampled time:2.000000 Average latency: 0.062805
+Sampled time:2.500000 Average latency: 0.066098
+Sampled time:3.000000 Average latency: 0.069395
+Sampled time:3.500000 Average latency: 0.071563
+Sampled time:4.000000 Average latency: 0.072877
+Sampled time:4.500000 Average latency: 0.071539
+Sampled time:5.000000 Average latency: 0.070256
+
+
+CBR: RTT does not exist for CBR, so did not compute latency (can use end to end delay but did not for this experiment).
+
+
+RED Reno
+********************
+TCP
+Sampled time:0.000000 Average latency: 0.061392
+Sampled time:0.500000 Average latency: 0.063872
+Sampled time:1.000000 Average latency: 0.063071
+Sampled time:1.500000 Average latency: 0.062886
+Sampled time:2.000000 Average latency: 0.062805
+Sampled time:2.500000 Average latency: 0.065179
+Sampled time:3.000000 Average latency: 0.068948
+Sampled time:3.500000 Average latency: 0.069761
+Sampled time:4.000000 Average latency: 0.070454
+Sampled time:4.500000 Average latency: 0.069869
+Sampled time:5.000000 Average latency: 0.069000
+
+CBR: RTT does not exist for CBR, so did not compute latency (can use end to end delay but did not for this experiment).
+
+
+RED Sack
+*******************
+TCP
+Sampled time:0.000000 Average latency: 0.061392
+Sampled time:0.500000 Average latency: 0.063872
+Sampled time:1.000000 Average latency: 0.063071
+Sampled time:1.500000 Average latency: 0.062886
+Sampled time:2.000000 Average latency: 0.062805
+Sampled time:2.500000 Average latency: 0.066005
+Sampled time:3.000000 Average latency: 0.066471
+Sampled time:3.500000 Average latency: 0.066423
+Sampled time:4.000000 Average latency: 0.066885
+Sampled time:4.500000 Average latency: 0.066397
+Sampled time:5.000000 Average latency: 0.065829
+
+CBR: RTT does not exist for CBR, so did not compute latency (can use end to end delay but did not for this experiment).
+
+
