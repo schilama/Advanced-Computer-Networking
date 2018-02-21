@@ -1,0 +1,49 @@
+1. How would you localize a partial proxy that operates only on Web connections?
+We can localize a partial proxy that operates only on Web connections by comparing the TTL values of Web connections which trigger censorship and Web connections 
+which do not trigger censorship. The Web connections containing censor triggers will be censored and therefore their TTL values will be different. We can then run 
+traceroutes or make Web connections which trigger censorship by setting hop count/TTL to 1 initially and incrementing the value until we receive a response 
+from the censor. Since we now know how many hops away the censor is, we have localized the partial proxy.
+
+2. How would you detect a flow terminating proxy?
+We can detect a flow terminating proxy by making a web connection and a non-web connection to the server IP. If a flow terminating proxy is used, the IP for the 
+web connection will be different from the IP used for the non-web connection. This is because flow terminating proxies maintain one TCP session with the client 
+and another TCP session with the server. So if the client sees the proxy's IP instead of the server's IP, we know that a flow terminating proxy is being used.
+
+3. How would you detect a flow rewriting proxy?
+Flow rewriting proxies are very hard to detect if implemented properly. Techniques such as fingerprinting can be used to detect the act of censorship when a flow 
+rewriting packet is used. This is because the proxy can never perfectly mimic responses from the destination. Some flow rewriting proxies captitalize headers or 
+make small changes that give them away.
+
+4. How can you detect on-path censors?
+On-path censors are easily detectable because the censor only injects packets and does not prevent responses from the destination reaching the source. If we are 
+suspecting censorship, we can just wait for the original packet to arrive. For example, injected DNS responses can easily be detected by implementing Hold-On; an 
+elegant solution that waits just a little bit longer for the original response to arrive without negatively affecting resolution performance.
+
+5. What can servers do to resist censorship?
+Servers can tunnel censored packets by using VPNs or over other uncensored protocols such as SkypeMorph. Servers can also use mirror/archive sites or deliver 
+content via E-mail. If multiple IP addresses/URLs of the server are available and are not censored, the client can use these to access content in censored 
+situations.
+
+6. How can you determine if a particular filtering product is being used for censorship?
+Sometimes the logo of the filtering product is readily available on the blocked page. We can look for user reports that a particular filtering product such as 
+"netsweeper" is being used online or through other communication channels such as email if we have access to them. We can also scan data (blocked website URLs, 
+HTTP responses, etc.) and match a set of signatures derived from hands on observations of a particular filtering product's censorship behavior. 
+
+7. You are browsing the web and a site doesn't work. You suspect that this site is being censored in your country. What are strategies you can use to confirm 
+this? How would you differentiate censorship from glitches?
+We can connect to another country using VPN and attempt to launch the website from there. If we are able to launch the website, we can conclude that the site 
+is being censored in our country. We can also make use of web proxies to access censored websites thereby detecting censorship. In order to differentiate 
+censorship from glitches we can perform this test on different days and at different times. Glitches are temporary but censorship works the same. 
+
+8. Your country decides to block all encrypted traffic. What is a strategy you could use to send a secret message to someone else? 
+How would you make this method scalable?
+If the country blocks encrypted traffic, we can just tunnel the encrypted packets. When the encrypted packets are tunneled, only the tunnel headers are visible 
+so the traffic is not blocked. Existing tunneling methods can operate well on a global scale so this method is actually very scalable. We can also send these 
+packets through oth 
+
+9. What methods would non-net neutral ISPs likely use to prioritize traffic? What experiments could you do to detect these methods?
+Current net neutrality rules require no blocking, no throttling, and no paid prioritization of data. Non-net neutral ISPs are likely to implement a combination 
+of blocking, throttling and prioritization. Blocking content can be done by using censors (IP blocking, DNS blocking, HTTP blocking) and prioritization can 
+be achieved by using QoS (Quality of Service) and CoS (Class of Service) methods. Data from and to users who pay more will be tagged with the highest CoS tag 
+with higher bandwidth allocation in the network. We can compare the RTT and latency to the same set of websites for different users to identify if the ISP is 
+offering better service to some of them. If there is a difference in the average RTT or latency, we can conclude that the ISP is non-net neutral.
