@@ -1,0 +1,261 @@
+#!/usr/bin/env python
+
+import sys
+import socket
+import re
+from urlparse import urlparse
+from struct import *
+import random
+import re
+
+#Assign a random port within range (1200, 9200) for our TCP connection
+SOURCE_PORT =  random.randrange(1200, 9200)
+
+def get_src_IP():
+	#Create a dummy socket to obtain source IP
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("elsrv2.cs.umass.edu", 80))
+    srcip = s.getsockname()[0]
+    s.close()
+    return srcip
+
+def checksum(msg):
+	#Compute the checksum 
+	mysum = 0
+	#Loop taking two characters at a time
+	for i in range(0, len(msg), 2):
+		myword = ord(msg[i]) + (ord(msg[i+1]) << 8 )
+		mysum = mysum + myword
+	mysum = (mysum >> 16) + (mysum & 0xffff);
+	mysum = mysum + (mysum >> 16);
+	#Complement and mask to four byte short
+	mysum = ~mysum & 0xffff
+	return mysum
+
+
+def createpacket(src_IP, dest_IP,syn,psh,ack,seqno,ackseqno,data):
+	#Create packet with IP and TCP headers
+	global SOURCE_PORT
+	packet = ''
+	ip_src = socket.inet_aton(src_IP)
+	ip_dest = socket.inet_aton(dest_IP)
+
+	#IP header fields
+	ip_ver = 4 #IPv4
+	ip_ihl = 5 #Setting to 5 as no options or padding
+	ip_ver_ihl = (ip_ver << 4) + ip_ihl
+	ip_dscp_ecn = 0 #Setting DSCP and ECN to 0
+	ip_total_len = 0 # kernel will fill the correct total length
+	ip_id = 55555   #ID of this packet
+	ip_flag_fragoff = 0 #Setting flags and fragmentation to 0
+	ip_ttl = 255 #Setting TTL to 255 (max)
+	ip_proto = socket.IPPROTO_TCP #Protocol type is TCP
+	ip_checksum = 0    #kernel will fill the checksum
+	
+	#Pack the IP fields into IP header format
+	ip_header = pack('!BBHHHBBH4s4s', ip_ver_ihl, ip_dscp_ecn, ip_total_len, ip_id, ip_flag_fragoff, ip_ttl, ip_proto, ip_checksum, ip_src, ip_dest)
+	 
+	#TCP header fields
+	tcp_source = SOURCE_PORT   # source port
+	tcp_dest = 80   # destination port
+	tcp_seq = seqno
+	tcp_ack_seq = ackseqno
+	tcp_doff = 5    #Data offset: 4 bit field, size of tcp header, 5 * 4 = 20 bytes
+	
+	#TCP flags
+	tcp_fin = 0
+	tcp_syn = syn
+	tcp_rst = 0
+	tcp_psh = psh
+	tcp_ack = ack
+	tcp_urg = 0
+	tcp_window = socket.htons (1000)    #maximum allowed window size
+	tcp_check = 0
+	tcp_urg_ptr = 0
+ 
+	tcp_offset_res = (tcp_doff << 4) + 0
+	tcp_flags = tcp_fin + (tcp_syn << 1) + (tcp_rst << 2) + (tcp_psh <<3) + (tcp_ack << 4) + (tcp_urg << 5)
+ 
+	#Pack the TCP fields into TCP header format
+	tcp_header = pack('!HHLLBBHHH' , tcp_source, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window, tcp_check, tcp_urg_ptr)
+ 	
+ 	#Accounting for odd data length
+ 	if len(data)%2 == 0:
+ 		#Do nothing if data is even
+ 		fmtstr = "!" + str(len(data)) + "s"
+ 	else:
+ 		#Add 1 and pack to have even length data 
+ 		fmtstr = "!" + str(len(data) + 1) + "s"
+ 	#Pack payload
+ 	user_data = pack(fmtstr,data)
+	
+	#Create Pseudo header fields
+	source_address = socket.inet_aton(src_IP)
+	dest_address = socket.inet_aton(dest_IP)
+	placeholder = 0
+	protocol = socket.IPPROTO_TCP
+	tcp_length = len(tcp_header) + len(user_data)
+ 
+	psh = pack('!4s4sBBH' , source_address , dest_address , placeholder , protocol , tcp_length);
+	psh = psh + tcp_header + user_data;
+	
+	tcp_check = checksum(psh)
+	
+	#Make the TCP header again with the updated checksum - checksum is not in network byte order
+	tcp_header = pack('!HHLLBBH' , tcp_source, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window) + pack('H' , tcp_check) + pack('!H' , tcp_urg_ptr)
+	#The complete packet
+	packet = ip_header + tcp_header + user_data
+	return packet
+
+def parseresponse(response):
+	if response == '':
+		#Handle empty response string gracefully
+		return
+	ip_header = response[0:20]
+	iph = unpack('!BBHHHBBH4s4s' , ip_header)
+	version_ihl = iph[0]
+	version = version_ihl >> 4
+	ihl = version_ihl & 0xF
+	iph_length = ihl * 4
+	ttl = iph[5]
+	protocol = iph[6]
+	s_addr = socket.inet_ntoa(iph[8]);
+	d_addr = socket.inet_ntoa(iph[9]);
+	#print 'Version : ' + str(version) + ' IP Header Length : ' + str(ihl) + ' TTL : ' + str(ttl) + ' Protocol : ' + str(protocol) + ' Source Address : ' + str(s_addr) + ' Destination Address : ' + str(d_addr)
+	tcp_header = response[iph_length:iph_length+20]
+	#now unpack them
+	tcph = unpack('!HHLLBBHHH' , tcp_header)
+	source_port = tcph[0]
+	dest_port = tcph[1]
+	sequence = tcph[2]
+	acknowledgement = tcph[3]
+	doff_reserved = tcph[4]
+	flags = tcph[5]
+	tcph_length = doff_reserved >> 4
+
+	#print 'Source Port : ' + str(source_port) + ' Dest Port : ' + str(dest_port) + ' Sequence Number : ' + str(sequence) + ' Acknowledgement : ' + str(acknowledgement) + ' TCP header length : ' + str(tcph_length)
+
+	h_size = iph_length + tcph_length * 4
+	data_size = len(response) - h_size
+
+	#get data from the packet (HTTP + data)
+	data = response[h_size:]
+	#print "string length:" + str(len(data))
+	unpackeddata = ''
+	if len(data)!=0:
+		fmtstring = "!" + str(len(data)) + "s"
+		unpackeddata = unpack(fmtstring, data)[0]
+	#print doff_reserved,"\n", flags#unpackeddata,"\n",data
+	return sequence,acknowledgement, unpackeddata, s_addr, dest_port, len(data), flags
+
+
+def main(inputlist):
+
+    try:
+        URL = inputlist[1]
+    except:
+        print "Please execute the program again using this format: ./rawhttpget [URL]"
+        return
+    try:
+    	sendsocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+    except socket.error, msg:
+    	print 'Send socket could not be created. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+    	sys.exit()
+    try:
+    	recvsocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+    except socket.error, msg:
+    	print 'Receive socket could not be created. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+    	sys.exit()
+
+    parsedURL = urlparse(URL)
+    dest_IP = socket.gethostbyname(parsedURL.netloc)
+    src_IP = get_src_IP()
+    print parsedURL
+    #Bind receive socket to receive data from server
+    recvsocket.bind((src_IP, 0))
+    #Initialize the initial sequence number to some random number within range (20000, 80000)
+    initialseqno = random.randrange(20000, 80000)
+    
+    #Send SYN
+    #syn=1, psh=0, ack=0
+    synpacket = createpacket(src_IP,dest_IP,1,0,0,initialseqno,0,'')
+    #print synpacket
+    sendsocket.sendto(synpacket,(dest_IP,0))
+    
+    #Receive SYN ACK
+    synackrecv = False
+    while(synackrecv==False):
+    	response = recvsocket.recv(65565)
+    	synacklist = parseresponse(response)
+        #seqno, ackno, data, sourceIP of received packet
+        if synacklist:
+    		if synacklist[1] == initialseqno+1:
+    			synackrecv = True
+    #print response 
+
+    #Send ACK
+    #syn=0,psh=0,ack=1
+    ackpacket = createpacket(src_IP,dest_IP,0,0,1,initialseqno+1,synacklist[0]+1,'')
+    sendsocket.sendto(ackpacket,(dest_IP,0))
+    #TCP handshake complete
+
+    #Send application data (HTTP GET)
+    #syn=0,psh=1,ack=1,myseqno,myackno
+    path = parsedURL.path
+    if path == '': #Corner case correction for http://elsrv2.cs.umass.edu (although the full URL should have / at the end)
+    	path = path + "/" 
+
+    httpgetpacket = createpacket(src_IP,dest_IP,0,1,1,initialseqno+1,synacklist[0]+1,"GET " + path + " HTTP/1.0\r\n\r\n")
+    sendsocket.sendto(httpgetpacket,(dest_IP,0))
+    
+    #Receive file from server
+    mynewseqno = initialseqno+1 + len("GET " + path + " HTTP/1.0\r\n\r\n") + 1 #Our current sequence number
+    response = [] #List of valid received packets
+    recvfinyet = False #Loop until we successfully receive FIN from server
+    actualdatastring = '' #Content of the file will be added here
+    expectedseq = synacklist[0]+1 #Maintain expected sequence number value here (our ack number)
+
+    while(recvfinyet == False):
+    	recvpacket = recvsocket.recv(65565)
+    	#resplist order: seqno,ackno,unpackeddata,s_addr(server IP),dest_port(our port), len(data), flags
+    	resplist = parseresponse(recvpacket)
+    	#If source is "elsrv2.cs.umass.edu" and the server is data sending to our port number
+    	if (resplist[3] == dest_IP) & (resplist[4] == SOURCE_PORT):
+    		#The packet is valid 
+    		if resplist[0] == expectedseq: #If the packet received is the one we are expecting 
+    			#print resplist[0]," ",resplist[5]
+    			if (resplist[5]==0):
+    			#If there is no payload do nothing as this should be ack to our GET request
+    				continue
+    			#Else acknowledge the receipt of packet, update expectedseq, and retrieve data 
+    			#syn=0,psh=0,ack=1, mynewseqno should equal resplist[1]
+    			ackpacket = createpacket(src_IP,dest_IP,0,0,1,mynewseqno,resplist[0]+resplist[5],'')
+    			sendsocket.sendto(ackpacket,(dest_IP,0))
+    			expectedseq = expectedseq + resplist[5]
+    			actualdatastring = actualdatastring + resplist[2]
+    			#flags = 25 implies we received FIN (ack psh fin = 00011001 = 25). Break out of while by setting recvfinyet to True.
+    			if resplist[6] == 25: 
+    				recvfinyet = True
+    				#print "Packet that ended receive loop:"
+    				#print resplist
+    			response.append(recvpacket) 
+    		else:
+    			#Request for expected packet again. syn=0,psh=0,ack=1
+    			ackpacket = createpacket(src_IP,dest_IP,0,0,1,mynewseqno,expectedseq,'')
+    		
+    writetofile = actualdatastring[actualdatastring.find("\r\n\r\n")+4:]
+    slashindex = 0
+    slashregex = re.compile("/")
+    for item in slashregex.finditer(path):
+    	slashindex = item.start()
+    if path[slashindex+1:] == '':
+    	#URL ends in a slash. Example: http://elsrv2.cs.umass.edu/accounts/login/
+    	f = open('index.html', 'w+')
+    else:
+    	#URL does not end in a slash. Example: http://www-edlab.cs.umass.edu/cs653/a3.html
+    	f = open(path[slashindex+1:], 'w+')
+    f.write(writetofile)
+    print "File located at " + URL + " has been written to '" + f.name + "'"
+
+if __name__ == "__main__":
+    main(sys.argv)
