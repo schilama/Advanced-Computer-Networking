@@ -1,1 +1,1 @@
-This repository contains COMPSCI653 course work
+This repository contains computer networking (COMPSCI653) course work
