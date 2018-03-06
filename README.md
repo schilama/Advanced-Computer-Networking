@@ -1,1 +1,1 @@
-This repository contains assignments that were part of COMPSCI653 curriculum
+This repository contains COMPSCI653 course work
