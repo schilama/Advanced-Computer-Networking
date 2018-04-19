@@ -19,7 +19,7 @@ In essence, you will be rebuilding the operating system's TCP/IP stack within yo
 As with project 2, you should not test your program against public web servers. <b>Only test
 your program against pages hosted on <i>elsrv2</i></b>. When you are testing your program, you will almost
 certainly send packets with invalid IP and TCP headers. These packets may trigger security warnings
-if you send them to public websites, e.g. the website adiinistrator may think someone is trying
+if you send them to public websites, e.g. the website administrator may think someone is trying
 to hack their site with spoofed packets.
 </p><p>
 You may test your program against Fakebook for now. I will add additional pages you can test 
